@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Умный конвертер валют</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0c0e14;
+      --bg-card: #13161f;
+      --bg-card-hover: #181c28;
+      --border: rgba(255,255,255,0.06);
+      --text: #e8eaef;
+      --muted: #7c8498;
+      --accent: #6366f1;
+      --accent-light: #818cf8;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --radius: 14px;
+      --radius-sm: 10px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.25);
+    }
+    * { box-sizing: border-box; }
+    html { overflow-x: hidden; }
+    body {
+      font-family: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.12), transparent);
+      color: var(--text);
+      margin: 0;
+      padding: 1rem;
+      min-height: 100vh;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+    #bg-layer {
+      position: fixed;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      z-index: -1;
+      filter: blur(0px);
+      opacity: 0.4;
+      pointer-events: none;
+      transition: filter 0.2s ease, opacity 0.2s ease;
+    }
+    .container {
+      max-width: 560px;
+      margin: 0 auto;
+      width: 100%;
+      min-width: 0;
+    }
+    @media (min-width: 600px) {
+      body { padding: 1.5rem; }
+    }
+    @media (min-width: 900px) {
+      body { padding: 2rem; }
+    }
+    .header { margin-bottom: 2rem; }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.35rem 0;
+      background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      word-wrap: break-word;
+    }
+    @media (min-width: 600px) {
+      h1 { font-size: 1.85rem; }
+    }
+    .subtitle { color: var(--muted); font-size: 0.9rem; margin: 0; font-weight: 500; }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--shadow);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    @media (min-width: 600px) {
+      .card { padding: 1.6rem; }
+    }
+    .card:hover { border-color: rgba(255,255,255,0.08); background: var(--bg-card-hover); }
+    .form-grid {
+      display: grid;
+      gap: 1rem;
+      align-items: end;
+    }
+    @media (max-width: 479px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+      .form-grid .field-btn { grid-column: 1; }
+      .form-grid .field input,
+      .form-grid .field select,
+      .form-grid .field-btn button { width: 100%; }
+    }
+    @media (min-width: 480px) and (max-width: 719px) {
+      .form-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .form-grid .field-btn { grid-column: span 2; }
+      .form-grid .field-btn button { width: 100%; }
+    }
+    @media (min-width: 720px) {
+      .form-grid {
+        grid-template-columns: 100px 1fr 1fr 80px auto;
+        gap: 0.85rem 1rem;
+      }
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      min-width: 0;
+    }
+    .field label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+    input, select {
+      width: 100%;
+      max-width: 100%;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.6rem 0.85rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+    button {
+      background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%);
+      color: #fff;
+      border: none;
+      padding: 0.65rem 1.35rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: transform 0.15s, box-shadow 0.2s;
+    }
+    button:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4); }
+    button:active { transform: translateY(0); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    #result {
+      margin-top: 1.35rem;
+      padding-top: 1.35rem;
+      border-top: 1px solid var(--border);
+    }
+    .result-big {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
+    }
+    .result-rate { font-size: 0.9rem; color: var(--muted); margin-bottom: 0.5rem; }
+    .trend {
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      width: fit-content;
+    }
+    .trend.up { color: var(--success); background: rgba(34, 197, 94, 0.12); }
+    .trend.down { color: var(--danger); background: rgba(239, 68, 68, 0.12); }
+    .trend.flat { color: var(--muted); background: rgba(255,255,255,0.05); }
+    .trend::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .trend.flat::before { display: none; }
+    .chart-wrap { height: 220px; margin-top: 1.25rem; }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0 0 1rem 0;
+      color: var(--text);
+    }
+    .history-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .history-table th,
+    .history-table td {
+      padding: 0.6rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .history-table th {
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .history-table tbody tr { transition: background 0.15s; }
+    .history-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+    @media (max-width: 559px) {
+      .history-table thead { display: none; }
+      .history-table,
+      .history-table tbody,
+      .history-table tr,
+      .history-table td { display: block; }
+      .history-table tr {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        margin-bottom: 0.6rem;
+        padding: 0.6rem 0.75rem;
+      }
+      .history-table td {
+        padding: 0.25rem 0;
+        border: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem;
+      }
+      .history-table td::before {
+        content: attr(data-label);
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+      .history-table td:last-child { padding-bottom: 0; }
+    }
+    #history-empty {
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding: 1rem 0;
+    }
+    .error {
+      color: var(--danger);
+      font-size: 0.9rem;
+      margin-top: 0.75rem;
+      padding: 0.5rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="bg-layer"></div>
+  <div class="container">
+    <header class="header">
+      <h1>Умный конвертер валют</h1>
+      <p class="subtitle">Курсы ЦБ РФ, конвертация и история за период</p>
+    </header>
+
+    <div class="card">
+      <form id="form">
+        <div class="form-grid">
+          <div class="field">
+            <label for="amount">Сумма</label>
+            <input type="number" id="amount" name="amount" value="1000" min="0.01" step="0.01" required>
+          </div>
+          <div class="field">
+            <label for="from_cur">Из</label>
+            <select id="from_cur" name="from_cur">
+              {% for code, name in currencies.items() %}
+              <option value="{{ code }}" {{ 'selected' if code == 'RUB' }}>{{ code }} — {{ name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="to_cur">В</label>
+            <select id="to_cur" name="to_cur">
+              {% for code, name in currencies.items() %}
+              <option value="{{ code }}" {{ 'selected' if code == 'USD' }}>{{ code }} — {{ name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="days">Дней</label>
+            <select id="days" name="days">
+              <option value="7">7</option>
+              <option value="14">14</option>
+              <option value="30">30</option>
+            </select>
+          </div>
+          <div class="field field-btn">
+            <button type="submit" id="btn">Перевести</button>
+          </div>
+        </div>
+        <div id="result" style="display: none;"></div>
+        <div id="error" class="error" style="display: none;"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">История конвертаций</h2>
+      <div class="history-wrap">
+        {% if history %}
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Дата</th>
+              <th>Сумма</th>
+              <th>Курс</th>
+              <th>Результат</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody">
+            {% for h in history %}
+            <tr>
+              <td data-label="Дата">{{ h.created_at[:16] if h.created_at else '-' }}</td>
+              <td data-label="Сумма">{{ "%.2f"|format(h.amount) }} {{ h.from_cur }}</td>
+              <td data-label="Курс">{{ "%.4f"|format(h.rate) }}</td>
+              <td data-label="Результат">{{ "%.2f"|format(h.result) }} {{ h.to_cur }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p id="history-empty">Пока пусто. Сделайте первый перевод выше — запись сохранится в базу.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Настройка фона (Object Storage)</h2>
+      <form id="bg-form">
+        <div class="field" style="margin-bottom: 0.85rem;">
+          <label for="bg-file">Картинка для фона (S3)</label>
+          <input type="file" id="bg-file" name="image" accept="image/*">
+        </div>
+        <div class="field" style="margin-bottom: 0.85rem;">
+          <label for="bg-blur">Размытие фона, px</label>
+          <input type="range" id="bg-blur" name="blur" min="0" max="30" value="8">
+        </div>
+        <button type="submit" id="bg-btn">Загрузить фон в облако</button>
+        <div id="bg-status" class="error" style="display:none; margin-top: 0.6rem;"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('form');
+    const resultEl = document.getElementById('result');
+    const errorEl = document.getElementById('error');
+    const btn = document.getElementById('btn');
+    const historyTbody = document.getElementById('history-tbody');
+    const historyEmpty = document.getElementById('history-empty');
+    const bgLayer = document.getElementById('bg-layer');
+    const bgForm = document.getElementById('bg-form');
+    const bgBlurInput = document.getElementById('bg-blur');
+    const bgStatus = document.getElementById('bg-status');
+    const bgBtn = document.getElementById('bg-btn');
+    let chartInstance = null;
+
+    function addHistoryRow(row) {
+      let tbody = document.getElementById('history-tbody');
+      if (!tbody && historyEmpty) {
+        const table = document.createElement('table');
+        table.className = 'history-table';
+        table.innerHTML = `
+          <thead><tr>
+            <th>Дата</th><th>Сумма</th><th>Курс</th><th>Результат</th>
+          </tr></thead>
+          <tbody id="history-tbody"></tbody>
+        `;
+        historyEmpty.replaceWith(table);
+        tbody = document.getElementById('history-tbody');
+      }
+      if (!tbody) return;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td data-label="Дата">${row.created_at || '-'}</td>
+        <td data-label="Сумма">${Number(row.amount).toFixed(2)} ${row.from_cur}</td>
+        <td data-label="Курс">${Number(row.rate).toFixed(4)}</td>
+        <td data-label="Результат">${Number(row.result).toFixed(2)} ${row.to_cur}</td>
+      `;
+      tbody.insertBefore(tr, tbody.firstChild);
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.style.display = 'none';
+      resultEl.style.display = 'none';
+      btn.disabled = true;
+
+      const fd = new FormData(form);
+      try {
+        const r = await fetch('/convert', { method: 'POST', body: fd });
+        const data = await r.json();
+        if (!r.ok) {
+          errorEl.textContent = data.error || 'Ошибка запроса';
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        resultEl.innerHTML = `
+          <div class="result-big">${data.amount} ${data.from_cur} = ${data.result.toFixed(2)} ${data.to_cur}</div>
+          <div class="result-rate">Курс: ${data.rate.toFixed(4)}</div>
+          <div class="trend ${data.trend}">За период курс ${data.trend_text}</div>
+          <div class="chart-wrap"><canvas id="chart"></canvas></div>
+        `;
+        resultEl.style.display = 'block';
+
+        if (data.history_row) addHistoryRow(data.history_row);
+
+        if (data.chart && data.chart.length) {
+          const ctx = document.getElementById('chart').getContext('2d');
+          if (chartInstance) chartInstance.destroy();
+          chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: data.chart.map(d => d.date.slice(0, 10)),
+              datasets: [{
+                label: `${data.from_cur} → ${data.to_cur}`,
+                data: data.chart.map(d => d.rate),
+                borderColor: '#818cf8',
+                backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                fill: true,
+                tension: 0.25
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7c8498' } },
+                y: { beginAtZero: false, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7c8498' } }
+              }
+            }
+          });
+        }
+      } catch (err) {
+        errorEl.textContent = 'Ошибка сети: ' + err.message;
+        errorEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    if (bgForm) {
+      bgBlurInput.addEventListener('input', () => {
+        const v = Number(bgBlurInput.value) || 0;
+        bgLayer.style.filter = `blur(${v}px)`;
+      });
+
+      bgForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        bgStatus.style.display = 'none';
+        bgStatus.textContent = '';
+        bgBtn.disabled = true;
+
+        const fd = new FormData(bgForm);
+        try {
+          const r = await fetch('/background', { method: 'POST', body: fd });
+          const data = await r.json();
+          if (!r.ok) {
+            bgStatus.textContent = data.error || 'Ошибка загрузки фона';
+            bgStatus.style.display = 'block';
+            return;
+          }
+          bgLayer.style.backgroundImage = `url('${data.url}')`;
+          const blur = Number(data.blur) || Number(bgBlurInput.value) || 0;
+          bgLayer.style.filter = `blur(${blur}px)`;
+          bgStatus.style.color = '#22c55e';
+          bgStatus.textContent = 'Фон успешно загружен в Object Storage';
+          bgStatus.style.display = 'block';
+        } catch (err) {
+          bgStatus.textContent = 'Ошибка сети: ' + err.message;
+          bgStatus.style.display = 'block';
+          bgStatus.style.color = '';
+        } finally {
+          bgBtn.disabled = false;
+        }
+      });
+    }
+  </script>
+</body>
+</html>
