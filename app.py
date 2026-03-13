@@ -239,7 +239,7 @@ def convert():
 @app.route("/api/rates")
 def api_rates():
     """JSON с текущими курсами (для внешнего использования)."""
-    rates = fetch_cbr_rates()s
+    rates = fetch_cbr_rates()
     if not rates:
         return jsonify({"error": "CBR unavailable"}), 502
     return jsonify(rates)
