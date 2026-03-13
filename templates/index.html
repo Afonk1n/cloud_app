@@ -265,7 +265,8 @@
   </style>
 </head>
 <body>
-  <div id="bg-layer"></div>
+  <div id="bg-layer"
+       {% if background_url %}style="background-image: url('{{ background_url }}'); filter: blur({{ background_blur|default(0) }}px);" {% endif %}></div>
   <div class="container">
     <header class="header">
       <h1>Умный конвертер валют</h1>
@@ -351,7 +352,7 @@
         </div>
         <div class="field" style="margin-bottom: 0.85rem;">
           <label for="bg-blur">Размытие фона, px</label>
-          <input type="range" id="bg-blur" name="blur" min="0" max="30" value="8">
+          <input type="range" id="bg-blur" name="blur" min="0" max="30" value="{{ background_blur|default(8) }}">
         </div>
         <button type="submit" id="bg-btn">Загрузить фон в облако</button>
         <div id="bg-status" class="error" style="display:none; margin-top: 0.6rem;"></div>

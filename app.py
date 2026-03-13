@@ -76,6 +76,14 @@ def init_db():
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+        """
+    )
     conn.commit()
     conn.close()
 
@@ -169,12 +177,49 @@ def get_trend(from_cur, to_cur, days=7):
     return points, trend, round(percent, 1)
 
 
+def get_background():
+    """Вернуть (url, blur) последнего сохранённого фона или (None, 0)."""
+    conn = get_db()
+    row = conn.execute(
+        "SELECT value FROM settings WHERE key = 'background_url'"
+    ).fetchone()
+    row_blur = conn.execute(
+        "SELECT value FROM settings WHERE key = 'background_blur'"
+    ).fetchone()
+    conn.close()
+    url = row["value"] if row else None
+    try:
+        blur = int(row_blur["value"]) if row_blur else 0
+    except (TypeError, ValueError):
+        blur = 0
+    return url, blur
+
+
+def save_background(url, blur):
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO settings (key, value) VALUES ('background_url', ?) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        (url,),
+    )
+    conn.execute(
+        "INSERT INTO settings (key, value) VALUES ('background_blur', ?) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        (str(int(blur)),),
+    )
+    conn.commit()
+    conn.close()
+
+
 @app.route("/")
 def index():
+    bg_url, bg_blur = get_background()
     return render_template(
         "index.html",
         currencies=CURRENCIES,
         history=get_history_list(),
+        background_url=bg_url,
+        background_blur=bg_blur,
     )
 
 
@@ -285,6 +330,7 @@ def background():
         return jsonify({"error": "Не удалось загрузить файл в Object Storage"}), 502
 
     url = f"{S3_ENDPOINT.rstrip('/')}/{S3_BUCKET}/{key}"
+    save_background(url, blur)
     return jsonify({"url": url, "blur": blur})
 
 
